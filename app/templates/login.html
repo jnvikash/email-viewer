@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Login — Email Viewer{% endblock %}
+{% block body %}
+<div class="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+  <div class="card shadow-sm" style="width:380px">
+    <div class="card-body p-4">
+      <div class="text-center mb-4">
+        <i class="bi bi-envelope-fill text-primary fs-1"></i>
+        <h4 class="mt-2 mb-0 fw-semibold">Email Viewer</h4>
+        {% if first_run %}
+        <p class="text-muted small mt-1">First run — create your admin account</p>
+        {% else %}
+        <p class="text-muted small mt-1">Sign in to access your emails</p>
+        {% endif %}
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }} py-2 small">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      {% if first_run %}
+      <div class="alert alert-info py-2 small mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        No users found. Please <a href="{{ url_for('auth.register') }}" class="alert-link">create an admin account</a>.
+      </div>
+      {% else %}
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label fw-medium">Username</label>
+          <input type="text" name="username" class="form-control" autofocus required
+                 placeholder="Enter your username">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-medium">Password</label>
+          <input type="password" name="password" class="form-control" required
+                 placeholder="Enter your password">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

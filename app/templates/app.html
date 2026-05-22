@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}Email Viewer{% endblock %}
+{% block head %}
+<style>
+  body { overflow: hidden; }
+</style>
+{% endblock %}
+{% block body %}
+<!-- Navbar -->
+<nav class="navbar navbar-dark bg-primary px-3 py-2" style="height:52px">
+  <span class="navbar-brand fw-semibold fs-6 me-3">
+    <i class="bi bi-envelope-fill me-2"></i>Email Viewer
+  </span>
+  <div class="flex-grow-1 me-3" style="max-width:480px">
+    <div class="input-group input-group-sm">
+      <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
+      <input type="text" id="searchInput" class="form-control border-0 shadow-none"
+             placeholder="Search emails…" autocomplete="off">
+      <button class="btn btn-outline-light btn-sm" id="clearSearch" style="display:none" onclick="App.clearSearch()">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+  </div>
+  <div class="ms-auto d-flex align-items-center gap-2">
+    {% if current_user.is_admin %}
+    <a href="/admin/" class="btn btn-outline-light btn-sm" title="Admin Panel">
+      <i class="bi bi-shield-lock me-1"></i>Admin
+    </a>
+    {% endif %}
+    <a href="/config" class="btn btn-outline-light btn-sm"><i class="bi bi-gear me-1"></i>Settings</a>
+    <div class="dropdown">
+      <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-1"
+              data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-person-circle"></i>
+        <span class="d-none d-md-inline">{{ current_user.username }}</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+        <li>
+          <span class="dropdown-item-text small text-muted px-3 py-1">
+            Signed in as <strong>{{ current_user.username }}</strong>
+            {% if current_user.is_admin %}
+              <span class="badge bg-danger ms-1">Admin</span>
+            {% endif %}
+          </span>
+        </li>
+        {% if current_user.email_folder %}
+        <li>
+          <span class="dropdown-item-text small text-muted px-3 py-1" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ current_user.email_folder }}">
+            <i class="bi bi-folder me-1"></i><code class="small">{{ current_user.email_folder }}</code>
+          </span>
+        </li>
+        {% endif %}
+        <li><hr class="dropdown-divider my-1"></li>
+        <li><a class="dropdown-item small" href="/logout"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Search dropdown overlay -->
+<div id="searchDropdown" class="position-absolute bg-white border rounded shadow-sm"
+     style="display:none; top:56px; left:52px; right:140px; z-index:1050; max-height:400px; overflow-y:auto">
+</div>
+
+<!-- 3-Pane Layout -->
+<div id="mainLayout">
+  <!-- Left: Folder Tree -->
+  <div id="folderPane" class="border-end bg-light">
+    <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+      <span class="fw-semibold small text-uppercase text-muted" style="letter-spacing:.05em">Folders</span>
+      <button class="btn btn-link btn-sm p-0 text-muted" onclick="FolderTree.reload()" title="Refresh">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+    <div id="folderTree" class="py-1"></div>
+  </div>
+
+  <!-- Middle: Email List -->
+  <div id="listPane" class="border-end d-flex flex-column">
+    <!-- Toolbar -->
+    <div class="px-3 py-2 border-bottom bg-white d-flex align-items-center gap-2" style="min-height:44px">
+      <span id="listTitle" class="fw-semibold small text-truncate flex-grow-1">All Mail</span>
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+          <i class="bi bi-sort-down me-1"></i>Sort
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="#" onclick="EmailList.setSort('-date')">Date (newest first)</a></li>
+          <li><a class="dropdown-item" href="#" onclick="EmailList.setSort('date')">Date (oldest first)</a></li>
+          <li><a class="dropdown-item" href="#" onclick="EmailList.setSort('sender')">Sender A→Z</a></li>
+          <li><a class="dropdown-item" href="#" onclick="EmailList.setSort('-sender')">Sender Z→A</a></li>
+          <li><a class="dropdown-item" href="#" onclick="EmailList.setSort('subject')">Subject A→Z</a></li>
+        </ul>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm" onclick="EmailList.toggleFilter()" title="Filter">
+        <i class="bi bi-funnel"></i>
+      </button>
+    </div>
+
+    <!-- Filter Panel (hidden by default) -->
+    <div id="filterPanel" class="px-3 py-2 border-bottom bg-light" style="display:none">
+      <div class="row g-2 align-items-end">
+        <div class="col">
+          <label class="form-label form-label-sm mb-1">From date</label>
+          <input type="date" id="filterDateFrom" class="form-control form-control-sm">
+        </div>
+        <div class="col">
+          <label class="form-label form-label-sm mb-1">To date</label>
+          <input type="date" id="filterDateTo" class="form-control form-control-sm">
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-primary btn-sm" onclick="EmailList.applyFilter()">Apply</button>
+          <button class="btn btn-link btn-sm text-muted" onclick="EmailList.clearFilter()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email rows -->
+    <div id="emailRows" class="flex-grow-1 overflow-auto"></div>
+
+    <!-- Pagination -->
+    <div id="paginationBar" class="border-top px-3 py-2 bg-white d-flex align-items-center justify-content-between"
+         style="min-height:44px">
+      <span id="paginationInfo" class="small text-muted"></span>
+      <nav><ul class="pagination pagination-sm mb-0" id="paginationPages"></ul></nav>
+    </div>
+  </div>
+
+  <!-- Right: Reading Pane -->
+  <div id="readingPane" class="d-flex flex-column">
+    <div id="readingEmpty" class="flex-grow-1 d-flex align-items-center justify-content-center text-muted">
+      <div class="text-center">
+        <i class="bi bi-envelope-open fs-1 d-block mb-2 opacity-25"></i>
+        <span class="small">Select an email to read</span>
+      </div>
+    </div>
+    <div id="readingContent" style="display:none" class="d-flex flex-column h-100">
+      <!-- Email header -->
+      <div id="emailHeader" class="px-4 py-3 border-bottom bg-white flex-shrink-0"></div>
+      <!-- Body iframe -->
+      <div class="flex-grow-1 overflow-auto" style="min-height:0">
+        <iframe id="emailIframe" sandbox="allow-same-origin allow-popups"
+                style="width:100%;height:100%;border:none;display:block"></iframe>
+      </div>
+      <!-- Attachments -->
+      <div id="attachmentSection" class="border-top px-4 py-3 flex-shrink-0" style="display:none">
+        <div class="small text-muted mb-2"><i class="bi bi-paperclip me-1"></i>Attachments</div>
+        <div id="attachmentList" class="d-flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Indexing Progress Modal -->
+<div class="modal fade" id="indexModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-arrow-repeat me-2"></i>Indexing Emails</h5>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small" id="indexModalMsg">Scanning your email folder…</p>
+        <div class="progress mb-2" style="height:20px">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" id="modalProgressBar"
+               style="width:0%" role="progressbar"></div>
+        </div>
+        <p class="small text-muted mb-0" id="modalProgressText">Starting…</p>
+      </div>
+      <div class="modal-footer" id="indexModalFooter" style="display:none">
+        <button class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attachment Preview Modal -->
+<dialog id="attachPreviewDialog" style="border:none;border-radius:8px;padding:0;max-width:90vw;max-height:90vh;width:900px">
+  <div class="modal-header border-bottom px-4 py-3 d-flex align-items-center">
+    <span id="previewTitle" class="fw-semibold text-truncate flex-grow-1"></span>
+    <button onclick="document.getElementById('attachPreviewDialog').close()" class="btn-close ms-3"></button>
+  </div>
+  <div id="previewBody" style="overflow:auto;max-height:80vh;padding:0"></div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}" type="module"></script>
+{% endblock %}

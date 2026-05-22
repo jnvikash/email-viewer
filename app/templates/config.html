@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Settings — Email Viewer{% endblock %}
+{% block body %}
+<nav class="navbar navbar-dark bg-primary px-3">
+  <a class="navbar-brand fw-semibold" href="/app"><i class="bi bi-envelope-fill me-2"></i>Email Viewer</a>
+  <div class="ms-auto d-flex gap-2">
+    <a href="/app" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    <a href="/logout" class="btn btn-outline-light btn-sm"><i class="bi bi-box-arrow-right me-1"></i>Logout</a>
+  </div>
+</nav>
+
+<div class="container mt-4" style="max-width:640px">
+  <h5 class="fw-semibold mb-4"><i class="bi bi-gear me-2"></i>Settings</h5>
+
+  <div class="card mb-4">
+    <div class="card-header fw-medium">Email Archive Configuration</div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label">Your Email Folder</label>
+        <input type="text" id="emailFolder" class="form-control font-monospace" disabled>
+        <div class="form-text">This path is set by your administrator. Contact them to change it.</div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Global Root Path</label>
+        <input type="text" id="rootPath" class="form-control font-monospace" disabled>
+        <div class="form-text">This is the global root path configured by your administrator.</div>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-success" id="btnIndex" onclick="startIndex()">
+          <i class="bi bi-arrow-repeat me-1"></i>Start Indexing
+        </button>
+        <button class="btn btn-outline-danger btn-sm" onclick="resetIndex()">
+          <i class="bi bi-trash me-1"></i>Reset My Index
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4" id="indexStatus" style="display:none">
+    <div class="card-header fw-medium">Indexing Progress</div>
+    <div class="card-body">
+      <div class="progress mb-2" style="height:20px">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar"
+             style="width:0%" role="progressbar"></div>
+      </div>
+      <p class="mb-0 small text-muted" id="progressText">Starting...</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="toast" class="toast" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMsg"></div>
+      <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const toastEl = document.getElementById('toast');
+const toast = new bootstrap.Toast(toastEl);
+
+function showToast(msg, ok=true) {
+  document.getElementById('toastMsg').textContent = msg;
+  toastEl.className = 'toast ' + (ok ? 'bg-success text-white' : 'bg-danger text-white');
+  toast.show();
+}
+
+async function loadConfig() {
+  const r = await fetch('/api/config');
+  const d = await r.json();
+  document.getElementById('rootPath').value = d.root_path || '(not configured)';
+  document.getElementById('emailFolder').value = d.email_folder || '(not set)';
+}
+
+async function startIndex() {
+  const r = await fetch('/api/index/start', {method:'POST'});
+  const d = await r.json();
+  if (d.status === 'started' || d.status === 'already_running') {
+    document.getElementById('indexStatus').style.display = '';
+    pollProgress();
+  } else {
+    showToast(d.error || 'Failed to start', false);
+  }
+}
+
+function pollProgress() {
+  const es = new EventSource('/api/index/progress');
+  es.onmessage = e => {
+    const d = JSON.parse(e.data);
+    const bar = document.getElementById('progressBar');
+    const txt = document.getElementById('progressText');
+    bar.style.width = d.percent + '%';
+    bar.textContent = d.percent + '%';
+    txt.textContent = `${d.done} of ${d.total} files indexed (${d.skipped} skipped) — ${d.status}`;
+    if (d.status === 'done') {
+      bar.classList.remove('progress-bar-animated');
+      showToast(`Indexing complete! ${d.done} emails indexed.`);
+      es.close();
+    } else if (d.status === 'error') {
+      bar.classList.add('bg-danger');
+      showToast('Indexing error — check logs', false);
+      es.close();
+    }
+  };
+  es.onerror = () => es.close();
+}
+
+async function resetIndex() {
+  if (!confirm('Reset your email index? This will require re-indexing all your emails.')) return;
+  const r = await fetch('/api/index/reset', {method:'DELETE'});
+  const d = await r.json();
+  showToast(d.ok ? 'Your index has been reset.' : (d.error || 'Failed'));
+}
+
+loadConfig();
+
+// Auto-check if indexing is already running
+(async () => {
+  const r = await fetch('/api/index/status');
+  const d = await r.json();
+  if (d.status === 'running') {
+    document.getElementById('indexStatus').style.display = '';
+    pollProgress();
+  }
+})();
+</script>
+{% endblock %}
+

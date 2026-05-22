@@ -1,0 +1,14 @@
+.DS_Store
+*.pyc
+__pycache__/
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+data/email_index.db
+data/email_index.db-shm
+data/email_index.db-wal
+settings.json
+.env
+.idea/
+.vscode/

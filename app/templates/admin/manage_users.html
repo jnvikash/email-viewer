@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+{% block title %}Manage Users — Admin Panel{% endblock %}
+{% block body %}
+<nav class="navbar navbar-dark bg-dark px-3 py-2">
+  <span class="navbar-brand fw-semibold fs-6">
+    <i class="bi bi-shield-lock me-2"></i>Admin Panel — Manage Users
+  </span>
+  <div class="ms-auto d-flex gap-2">
+    <a href="/admin/" class="btn btn-outline-light btn-sm"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+    <a href="/app" class="btn btn-outline-light btn-sm"><i class="bi bi-envelope me-1"></i>App</a>
+    <a href="/logout" class="btn btn-outline-light btn-sm"><i class="bi bi-box-arrow-right"></i></a>
+  </div>
+</nav>
+
+<div class="container-fluid py-4">
+
+  <!-- Toolbar -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="mb-0 fw-semibold">User Accounts</h5>
+    <button class="btn btn-primary" onclick="openCreateUserModal()">
+      <i class="bi bi-person-plus me-1"></i>Create New User
+    </button>
+  </div>
+
+  <!-- Alert area -->
+  <div id="globalAlert" class="alert" style="display:none"></div>
+
+  <!-- Users table -->
+  <div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="usersTable">
+        <thead class="table-light">
+          <tr>
+            <th>Username</th>
+            <th>Email Folder Path</th>
+            <th>Role</th>
+            <th style="width:90px" class="text-end">Emails</th>
+            <th style="width:140px">Index Status</th>
+            <th>Created</th>
+            <th style="width:80px">Status</th>
+            <th style="width:170px" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody">
+          <tr><td colspan="8" class="text-center text-muted py-4">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     CREATE USER MODAL
+══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Create New User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="createUserForm" autocomplete="off">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Username <span class="text-danger">*</span></label>
+              <input type="text" name="username" class="form-control" required minlength="3"
+                     placeholder="min. 3 characters" autocomplete="off">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Password <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="password" name="password" id="createPassword" class="form-control" required minlength="6"
+                       placeholder="min. 6 characters" autocomplete="new-password">
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePwd('createPassword', this)">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Email Folder Path</label>
+              <div class="input-group">
+                <input type="text" name="email_folder" id="createEmailFolder" class="form-control font-monospace"
+                       placeholder="e.g. /home/user/Maildir or C:\Users\user\AppData\Local\Microsoft\Outlook">
+                <button class="btn btn-outline-secondary" type="button" onclick="openFolderBrowser('createEmailFolder')">
+                  <i class="bi bi-folder2-open me-1"></i>Browse
+                </button>
+              </div>
+              <div class="form-text">Absolute path to the root of this user's email files (.msg, .eml, etc.)</div>
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input type="checkbox" name="is_admin" class="form-check-input" id="createIsAdmin" role="switch">
+                <label class="form-check-label" for="createIsAdmin">
+                  <strong>Admin user</strong>
+                  <span class="text-muted ms-1 small">— can manage users and access this panel</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div id="createError" class="alert alert-danger mt-3 mb-0 py-2 small" style="display:none"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitCreateUser()">
+          <i class="bi bi-person-check me-1"></i>Create User
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     EDIT USER MODAL
+══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editUserTitle"><i class="bi bi-pencil me-2"></i>Edit User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editUserId">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-medium">Email Folder Path</label>
+            <div class="input-group">
+              <input type="text" id="editEmailFolder" class="form-control font-monospace"
+                     placeholder="Absolute path to email folder">
+              <button class="btn btn-outline-secondary" type="button" onclick="openFolderBrowser('editEmailFolder')">
+                <i class="bi bi-folder2-open me-1"></i>Browse
+              </button>
+            </div>
+            <div class="form-text">Absolute path to the root of this user's email files (.msg, .eml, etc.)</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input type="checkbox" id="editIsAdmin" class="form-check-input" role="switch">
+              <label class="form-check-label" for="editIsAdmin">
+                <strong>Admin user</strong>
+                <span class="text-muted ms-1 small">— can manage users and access this panel</span>
+              </label>
+            </div>
+          </div>
+          <div class="col-12">
+            <hr class="my-1">
+            <label class="form-label fw-medium">Change Password</label>
+            <div class="input-group">
+              <input type="password" id="editPassword" class="form-control" autocomplete="new-password"
+                     placeholder="Leave blank to keep current password">
+              <button class="btn btn-outline-secondary" type="button" onclick="togglePwd('editPassword', this)">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="editError" class="alert alert-danger mt-3 mb-0 py-2 small" style="display:none"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitEditUser()">
+          <i class="bi bi-save me-1"></i>Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     FOLDER BROWSER MODAL
+══════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="folderBrowserModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-folder2-open me-2"></i>Browse Server Filesystem</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Path bar -->
+        <div class="px-3 py-2 border-bottom bg-light d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary" id="fbUpBtn" onclick="fbNavigateUp()" title="Up one level">
+            <i class="bi bi-arrow-up"></i>
+          </button>
+          <input type="text" id="fbPathInput" class="form-control form-control-sm font-monospace flex-grow-1"
+                 placeholder="Type a path and press Enter" onkeydown="if(event.key==='Enter') fbNavigate(this.value)">
+          <button class="btn btn-sm btn-primary" onclick="fbNavigate(document.getElementById('fbPathInput').value)">
+            <i class="bi bi-arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- Alert -->
+        <div id="fbAlert" class="alert alert-warning py-2 small mx-3 mt-2 mb-0" style="display:none"></div>
+
+        <!-- Listing -->
+        <div id="fbList" style="max-height:400px; overflow-y:auto">
+          <div class="text-center text-muted py-4" id="fbLoading">
+            <div class="spinner-border spinner-border-sm me-2"></div>Loading…
+          </div>
+        </div>
+
+        <!-- Selected path bar -->
+        <div class="px-3 py-2 border-top bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-folder-fill text-warning"></i>
+          <span class="small fw-medium me-1">Selected:</span>
+          <code id="fbSelectedPath" class="small flex-grow-1 text-truncate">—</code>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" onclick="fbConfirmSelection()">
+          <i class="bi bi-check-lg me-1"></i>Use This Folder
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Bootstrap modal handles (initialised in DOMContentLoaded, after Bootstrap JS loads) ───
+let createModal, editModal, fbModal;
+
+// ─── Global state ──────────────────────────────────────────────────────────
+let fbTargetField = null;
+let fbCurrentPath = null;
+let fbSelectedPath = null;
+let allUsers = [];
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+function showGlobal(msg, type = 'success') {
+  const el = document.getElementById('globalAlert');
+  el.className = `alert alert-${type} py-2 small`;
+  el.textContent = msg;
+  el.style.display = '';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function togglePwd(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.querySelector('i').className = 'bi bi-eye-slash';
+  } else {
+    inp.type = 'password';
+    btn.querySelector('i').className = 'bi bi-eye';
+  }
+}
+
+function indexBadge(user) {
+  const s = user.index_status || 'idle';
+  if (s === 'running') {
+    const pct = user.total_files > 0 ? Math.round(user.done_files / user.total_files * 100) : 0;
+    return `<span class="badge bg-primary"><i class="bi bi-arrow-repeat me-1"></i>Running ${pct}%</span>`;
+  }
+  if (s === 'done')  return `<span class="badge bg-success"><i class="bi bi-check me-1"></i>Done (${user.email_count})</span>`;
+  if (s === 'error') return `<span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error</span>`;
+  return `<span class="badge bg-light text-muted border">Idle</span>`;
+}
+
+// ─── Load & render users ───────────────────────────────────────────────────
+function loadUsers() {
+  fetch('/admin/api/users')
+    .then(r => r.json())
+    .then(users => {
+      allUsers = users;
+      renderUsers(users);
+    })
+    .catch(() => {
+      document.getElementById('usersBody').innerHTML =
+        '<tr><td colspan="8" class="text-center text-danger py-3">Failed to load users.</td></tr>';
+    });
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById('usersBody');
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No users found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => `
+    <tr id="user-row-${u.id}">
+      <td>
+        <strong>${escHtml(u.username)}</strong>
+        ${u.is_admin ? ' <span class="badge bg-danger ms-1">Admin</span>' : ''}
+      </td>
+      <td class="small">
+        ${u.email_folder
+          ? `<code class="text-muted">${escHtml(u.email_folder)}</code>`
+          : '<span class="text-muted fst-italic">not set</span>'}
+      </td>
+      <td>${u.is_admin ? '<span class="badge bg-danger">Admin</span>' : '<span class="badge bg-secondary">User</span>'}</td>
+      <td class="text-end fw-medium">${u.email_count ?? 0}</td>
+      <td>${indexBadge(u)}</td>
+      <td class="small text-muted">${u.created_at.substring(0,10)}</td>
+      <td>${u.is_active
+        ? '<span class="badge bg-success">Active</span>'
+        : '<span class="badge bg-warning text-dark">Inactive</span>'}</td>
+      <td class="text-end">
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-primary" onclick="openEditModal(${u.id})" title="Edit">
+            <i class="bi bi-pencil"></i>
+          </button>
+          ${u.email_folder
+            ? `<button class="btn btn-outline-info" onclick="reindexUser(${u.id})" title="Re-index emails">
+                <i class="bi bi-arrow-repeat"></i>
+               </button>`
+            : `<button class="btn btn-outline-secondary" disabled title="No folder set">
+                <i class="bi bi-arrow-repeat"></i>
+               </button>`}
+          ${u.is_active
+            ? `<button class="btn btn-outline-danger" onclick="deactivateUser(${u.id})" title="Deactivate">
+                <i class="bi bi-slash-circle"></i>
+               </button>`
+            : `<button class="btn btn-outline-success" onclick="activateUser(${u.id})" title="Activate">
+                <i class="bi bi-check-circle"></i>
+               </button>`}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Create user ───────────────────────────────────────────────────────────
+function openCreateUserModal() {
+  document.getElementById('createUserForm').reset();
+  document.getElementById('createError').style.display = 'none';
+  createModal.show();
+}
+
+function submitCreateUser() {
+  const form = document.getElementById('createUserForm');
+  const errEl = document.getElementById('createError');
+  errEl.style.display = 'none';
+
+  const data = {
+    username:     form.username.value.trim(),
+    password:     document.getElementById('createPassword').value,
+    email_folder: document.getElementById('createEmailFolder').value.trim(),
+    is_admin:     document.getElementById('createIsAdmin').checked,
+  };
+
+  fetch('/admin/api/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  .then(r => r.json().then(d => [r.ok, d]))
+  .then(([ok, d]) => {
+    if (ok) {
+      createModal.hide();
+      loadUsers();
+      showGlobal(`User "${data.username}" created successfully.`, 'success');
+    } else {
+      errEl.textContent = d.error || 'Unknown error';
+      errEl.style.display = '';
+    }
+  })
+  .catch(e => {
+    errEl.textContent = 'Request failed: ' + e;
+    errEl.style.display = '';
+  });
+}
+
+// ─── Edit user ─────────────────────────────────────────────────────────────
+function openEditModal(userId) {
+  const user = allUsers.find(u => u.id === userId);
+  if (!user) return;
+
+  document.getElementById('editUserId').value = user.id;
+  document.getElementById('editEmailFolder').value = user.email_folder || '';
+  document.getElementById('editIsAdmin').checked = !!user.is_admin;
+  document.getElementById('editPassword').value = '';
+  document.getElementById('editUserTitle').innerHTML =
+    `<i class="bi bi-pencil me-2"></i>Edit User: <strong>${escHtml(user.username)}</strong>`;
+  document.getElementById('editError').style.display = 'none';
+  editModal.show();
+}
+
+function submitEditUser() {
+  const userId = document.getElementById('editUserId').value;
+  const errEl  = document.getElementById('editError');
+  errEl.style.display = 'none';
+
+  const payload = {
+    email_folder: document.getElementById('editEmailFolder').value.trim(),
+    is_admin:     document.getElementById('editIsAdmin').checked,
+  };
+
+  fetch(`/admin/api/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  .then(r => r.json().then(d => [r.ok, d]))
+  .then(([ok, d]) => {
+    if (!ok) {
+      errEl.textContent = d.error || 'Unknown error';
+      errEl.style.display = '';
+      return;
+    }
+    const password = document.getElementById('editPassword').value;
+    if (!password) {
+      editModal.hide();
+      loadUsers();
+      showGlobal('User updated.', 'success');
+      return;
+    }
+    return fetch(`/admin/api/users/${userId}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    })
+    .then(r => r.json().then(d => [r.ok, d]))
+    .then(([ok2, d2]) => {
+      if (!ok2) {
+        errEl.textContent = d2.error || 'Password update failed';
+        errEl.style.display = '';
+        return;
+      }
+      editModal.hide();
+      loadUsers();
+      showGlobal('User updated (password changed).', 'success');
+    });
+  })
+  .catch(e => {
+    errEl.textContent = 'Request failed: ' + e;
+    errEl.style.display = '';
+  });
+}
+
+// ─── Activate / deactivate ─────────────────────────────────────────────────
+function deactivateUser(userId) {
+  const user = allUsers.find(u => u.id === userId);
+  if (!confirm(`Deactivate user "${user?.username}"? They will no longer be able to log in.`)) return;
+  fetch(`/admin/api/users/${userId}/deactivate`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { loadUsers(); showGlobal('User deactivated.', 'warning'); }
+      else alert('Error: ' + d.error);
+    });
+}
+
+function activateUser(userId) {
+  fetch(`/admin/api/users/${userId}/activate`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) { loadUsers(); showGlobal('User activated.', 'success'); }
+      else alert('Error: ' + d.error);
+    });
+}
+
+// ─── Re-index ──────────────────────────────────────────────────────────────
+function reindexUser(userId) {
+  const user = allUsers.find(u => u.id === userId);
+  if (!confirm(`Start re-indexing emails for "${user?.username}"?\nFolder: ${user?.email_folder}`)) return;
+
+  fetch(`/admin/api/users/${userId}/reindex`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { showGlobal('Error: ' + d.error, 'danger'); return; }
+      showGlobal(`Indexing started for "${user?.username}".`, 'info');
+      // Poll status every 2s until done
+      const poll = setInterval(() => {
+        fetch(`/admin/api/users/${userId}/status`)
+          .then(r => r.json())
+          .then(s => {
+            // Update badge inline
+            const row = document.getElementById(`user-row-${userId}`);
+            if (row) {
+              const fakUser = { ...user, index_status: s.status, done_files: s.done_files, total_files: s.total_files, email_count: s.done_files };
+              row.querySelector('td:nth-child(5)').innerHTML = indexBadge(fakUser);
+            }
+            if (s.status === 'done' || s.status === 'error' || s.status === 'idle') {
+              clearInterval(poll);
+              loadUsers();
+              if (s.status === 'done')  showGlobal(`Indexing complete for "${user?.username}" — ${s.done_files} emails.`, 'success');
+              if (s.status === 'error') showGlobal(`Indexing error for "${user?.username}": ${s.error_msg}`, 'danger');
+            }
+          })
+          .catch(() => clearInterval(poll));
+      }, 2000);
+    })
+    .catch(e => showGlobal('Request failed: ' + e, 'danger'));
+}
+
+// ─── Folder Browser ────────────────────────────────────────────────────────
+function openFolderBrowser(targetFieldId) {
+  fbTargetField  = targetFieldId;
+  fbSelectedPath = document.getElementById(targetFieldId).value.trim() || null;
+
+  // Set initial path from the field value, or default
+  const startPath = fbSelectedPath || '';
+  fbNavigate(startPath);
+
+  document.getElementById('fbSelectedPath').textContent = fbSelectedPath || '—';
+  document.getElementById('fbAlert').style.display = 'none';
+  fbModal.show();
+}
+
+function fbNavigate(path) {
+  document.getElementById('fbLoading').style.display = '';
+  document.getElementById('fbList').innerHTML = document.getElementById('fbLoading').outerHTML;
+
+  const url = '/admin/api/browse' + (path ? '?path=' + encodeURIComponent(path) : '');
+  fetch(url)
+    .then(r => r.json())
+    .then(data => {
+      fbCurrentPath = data.current;
+      document.getElementById('fbPathInput').value = data.current;
+      document.getElementById('fbUpBtn').disabled = !data.parent;
+
+      const alertEl = document.getElementById('fbAlert');
+      if (data.error) {
+        alertEl.textContent = data.error;
+        alertEl.style.display = '';
+      } else {
+        alertEl.style.display = 'none';
+      }
+
+      if (!data.entries.length && !data.error) {
+        document.getElementById('fbList').innerHTML =
+          '<p class="text-muted small text-center py-3">Empty folder or no accessible subdirectories.</p>';
+        return;
+      }
+
+      const dirs = data.entries.filter(e => e.is_dir);
+      const files = data.entries.filter(e => !e.is_dir);
+
+      let html = '<ul class="list-group list-group-flush">';
+
+      // Current folder "select this" row
+      html += `
+        <li class="list-group-item list-group-item-action py-2 px-3 d-flex align-items-center gap-2
+                   ${fbSelectedPath === data.current ? 'list-group-item-success' : 'bg-light'}"
+            onclick="fbSelectFolder('${escJs(data.current)}')" style="cursor:pointer">
+          <i class="bi bi-folder-fill text-warning"></i>
+          <span class="flex-grow-1 small fw-medium">(Select current folder)</span>
+          <code class="small text-muted text-truncate" style="max-width:300px">${escHtml(data.current)}</code>
+        </li>`;
+
+      dirs.forEach(e => {
+        const sel = fbSelectedPath === e.path;
+        html += `
+          <li class="list-group-item list-group-item-action py-2 px-3 d-flex align-items-center gap-2
+                     ${sel ? 'list-group-item-success' : ''}"
+              style="cursor:pointer"
+              onclick="fbSelectFolder('${escJs(e.path)}')"
+              ondblclick="fbNavigate('${escJs(e.path)}')">
+            <i class="bi bi-folder-fill text-warning"></i>
+            <span class="flex-grow-1 small">${escHtml(e.name)}</span>
+            <button class="btn btn-sm btn-link text-muted p-0 ms-1" title="Open folder"
+                    onclick="event.stopPropagation(); fbNavigate('${escJs(e.path)}')">
+              <i class="bi bi-arrow-right-circle"></i>
+            </button>
+          </li>`;
+      });
+
+      if (files.length) {
+        html += `<li class="list-group-item py-1 px-3 bg-light">
+          <span class="small text-muted">${files.length} file(s) — not selectable</span>
+        </li>`;
+      }
+
+      html += '</ul>';
+      document.getElementById('fbList').innerHTML = html;
+    })
+    .catch(e => {
+      document.getElementById('fbList').innerHTML =
+        `<p class="text-danger small text-center py-3">Error: ${escHtml(String(e))}</p>`;
+    });
+}
+
+function fbNavigateUp() {
+  if (fbCurrentPath) {
+    const url = '/admin/api/browse?path=' + encodeURIComponent(fbCurrentPath);
+    fetch(url).then(r => r.json()).then(d => {
+      if (d.parent) fbNavigate(d.parent);
+    });
+  }
+}
+
+function fbSelectFolder(path) {
+  fbSelectedPath = path;
+  document.getElementById('fbSelectedPath').textContent = path;
+  // Highlight selected row — re-render
+  document.querySelectorAll('#fbList .list-group-item').forEach(li => {
+    li.classList.remove('list-group-item-success');
+  });
+  fbNavigate(fbCurrentPath); // refresh list to show selection highlight
+}
+
+function fbConfirmSelection() {
+  if (!fbSelectedPath) {
+    alert('Please select a folder first.');
+    return;
+  }
+  if (fbTargetField) {
+    document.getElementById(fbTargetField).value = fbSelectedPath;
+  }
+  fbModal.hide();
+}
+
+function escJs(str) {
+  return String(str).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────
+// DOMContentLoaded fires after Bootstrap JS (loaded at end of <body>) has executed.
+document.addEventListener('DOMContentLoaded', () => {
+  createModal = new bootstrap.Modal(document.getElementById('createUserModal'));
+  editModal   = new bootstrap.Modal(document.getElementById('editUserModal'));
+  fbModal     = new bootstrap.Modal(document.getElementById('folderBrowserModal'));
+  loadUsers();
+});
+</script>
+{% endblock %}

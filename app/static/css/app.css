@@ -1,0 +1,212 @@
+/* ── Reset & Base ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  background: #fff;
+}
+
+/* ── 3-Pane Layout ─────────────────────────────────────── */
+#mainLayout {
+  display: grid;
+  grid-template-columns: 240px 340px 1fr;
+  grid-template-rows: 1fr;
+  height: calc(100vh - 52px);
+  overflow: hidden;
+}
+
+#folderPane  { overflow-y: auto; }
+#listPane    { overflow: hidden; }
+#readingPane { overflow: hidden; background: #fff; }
+
+/* ── Folder Tree ───────────────────────────────────────── */
+#folderTree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 1px 6px;
+  color: #333;
+  font-size: 13px;
+  user-select: none;
+  transition: background .1s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-item:hover { background: #e8edf3; }
+.folder-item.active { background: #0d6efd1a; color: #0d6efd; font-weight: 500; }
+
+.folder-item .folder-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.folder-item .badge { font-size: 11px; flex-shrink: 0; }
+
+.folder-toggle {
+  width: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+  opacity: .5;
+  transition: opacity .15s;
+}
+.folder-toggle:hover { opacity: 1; }
+
+.folder-children { padding-left: 16px; }
+.folder-children.collapsed { display: none; }
+
+/* ── Email List ────────────────────────────────────────── */
+.email-row {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background .1s;
+  gap: 2px;
+}
+
+.email-row:hover { background: #f8f9fa; }
+.email-row.active { background: #e8f0fe; border-left: 3px solid #0d6efd; }
+.email-row.unread .email-subject { font-weight: 600; }
+
+.email-sender {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.email-date {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.email-subject {
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-preview {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #aaa;
+}
+
+mark { background: #fff176; border-radius: 2px; padding: 0 1px; }
+
+/* ── Reading Pane ──────────────────────────────────────── */
+#emailHeader .header-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  align-items: baseline;
+}
+#emailHeader .header-label {
+  color: #888;
+  min-width: 50px;
+  flex-shrink: 0;
+}
+#emailHeader .header-value {
+  color: #333;
+  word-break: break-word;
+}
+
+#emailHeader h5.subject-line {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  color: #1a1a1a;
+}
+
+.importance-high { color: #dc3545; font-size: 12px; }
+.importance-low  { color: #6c757d; font-size: 12px; }
+
+/* ── Attachment Cards ──────────────────────────────────── */
+.att-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  max-width: 220px;
+  cursor: default;
+}
+
+.att-card .att-icon { font-size: 20px; flex-shrink: 0; }
+.att-card .att-info { overflow: hidden; }
+.att-card .att-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.att-card .att-size { font-size: 11px; color: #888; }
+.att-card .att-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ── Search Dropdown ───────────────────────────────────── */
+.search-result-item {
+  padding: 8px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+.search-result-item:hover { background: #f8f9fa; }
+.search-result-item .sr-subject { font-weight: 500; font-size: 13px; }
+.search-result-item .sr-meta   { font-size: 11px; color: #888; }
+.search-result-item .sr-snippet { font-size: 12px; color: #555; margin-top: 2px; }
+
+/* ── Pagination ────────────────────────────────────────── */
+.page-link { font-size: 12px; padding: 3px 8px; }
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+/* ── Empty States ──────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #aaa;
+  gap: 8px;
+}
+.empty-state i { font-size: 32px; opacity: .4; }
+
+/* ── Responsive: collapse folder pane on narrow ─────────── */
+@media (max-width: 900px) {
+  #mainLayout { grid-template-columns: 0px 320px 1fr; }
+  #folderPane { display: none; }
+}
+@media (max-width: 640px) {
+  #mainLayout { grid-template-columns: 1fr; }
+  #listPane { display: none; }
+}
