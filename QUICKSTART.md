@@ -1,33 +1,204 @@
-# Quick Start Guide
+# Email Viewer — Quick Start Guide
 
-## 1. Start the Application
+Get Email Viewer up and running in minutes.
+
+## 30-Second Setup
 
 ```bash
-cd /home/vikash/email-viewer
+cd email-viewer
+make setup    # Creates venv, installs deps, initializes database
+make run      # Starts the app
+```
+
+Open **http://localhost:5000** and create your admin account.
+
+---
+
+## 5-Minute Full Setup
+
+### Step 1: Setup (2 min)
+```bash
+cd email-viewer
+make setup
+```
+
+### Step 2: Run (1 min)
+```bash
+make run
+```
+
+### Step 3: Create Admin Account (1 min)
+- Visit http://localhost:5000
+- Click "Create an admin account"
+- Enter username, password, optional email folder path
+- Click "Create Admin Account"
+
+### Step 4: Index Emails (optional, 1+ min)
+- Go to Settings (⚙️)
+- Start Indexing
+- Wait for completion
+- Browse your emails!
+
+---
+
+## Common Commands
+
+| Command | What it does |
+|---------|-------------|
+| `make help` | Show all available commands |
+| `make setup` | One-time: create venv + install + init database |
+| `make install` | Update dependencies |
+| `make run` | Start the application |
+| `make config` | Interactive configuration wizard |
+| `make validate` | Check installation is correct |
+| `make reset-db` | Delete all users and emails (dangerous!) |
+| `make reset-all` | Full clean slate (venv + database) |
+| `make clean` | Remove virtual environment |
+
+---
+
+## First-Time Checklist
+
+- [ ] Run `make setup`
+- [ ] Run `make run`
+- [ ] Create admin account at http://localhost:5000
+- [ ] Go to Settings, set email folder path
+- [ ] Click "Start Indexing"
+- [ ] Wait for indexing complete
+- [ ] Browse emails in 3-pane interface
+- [ ] Try searching emails
+- [ ] (Admin) Create more users in Admin panel
+
+---
+
+## Multi-User Setup
+
+### As Admin: Create a New User
+
+1. Log in with admin account
+2. Click **Admin** in top right
+3. Click **Manage Users**
+4. Click **"Create New User"**
+5. Fill in username, password, email folder
+6. (Optional) Check "Admin user" to make them an admin
+7. Click **"Create User"**
+
+The new user can now log in.
+
+### Per-User Email Folders
+
+Each user can have their own email folder path:
+
+**Admin sets it:**
+- Admin → Manage Users → Edit user → Set "Email Folder Path"
+
+**User views it:**
+- Settings (⚙️) → Shows their assigned folder
+
+---
+
+## Troubleshooting
+
+### "make: command not found"
+You don't have `make` installed. Use Python directly:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -c "from app.db import init_db; init_db()"
 python run.py
 ```
 
-You'll see:
+### "Virtual environment not found"
+```bash
+make setup
 ```
-Email Viewer running at http://localhost:5000
+
+### "Database not found"
+```bash
+make init-db
 ```
 
-## 2. Open in Browser
+### "Settings not found"
+```bash
+make config
+# Or just run the app, it will create a default settings.json
+```
 
-Navigate to: **http://localhost:5000**
+### "Port 5000 already in use"
+Either:
+- Stop the other app using port 5000
+- Or modify `run.py` to use a different port
 
-## 3. First Run - Set Password
+### Still stuck?
+Check `SETUP.md` for detailed troubleshooting.
 
-- You'll see a login page asking you to create a password
-- Enter any password you want to use
-- Click "Set Password & Continue"
+---
 
-## 4. Configure Email Folder
+## What's Next?
 
-- Click the **Settings** (⚙️) button in the top right
-- Enter the **absolute path** to your .msg files folder:
-  ```
-  /mnt/c/Users/User/Documents/msg
+- **Browse emails** — Click folders on the left
+- **Search** — Type in the search bar at top
+- **Download attachments** — Click email, scroll to attachments
+- **Create users** — Admin → Manage Users (admin only)
+- **Change settings** — Settings (⚙️) icon
+
+---
+
+## Architecture at a Glance
+
+```
+┌─────────────────────────────┐
+│   Web Browser (localhost:5000)
+└──────────────┬──────────────┘
+               │
+┌──────────────▼──────────────┐
+│   Flask Web App (run.py)     │
+│  ├─ Multi-user auth         │
+│  ├─ Admin panel             │
+│  └─ REST API endpoints      │
+└──────────────┬──────────────┘
+               │
+┌──────────────▼──────────────┐
+│   SQLite Database (data/)    │
+│  ├─ Users + passwords       │
+│  ├─ Emails metadata         │
+│  ├─ Full-text search index  │
+│  └─ Indexing status         │
+└──────────────┬──────────────┘
+               │
+┌──────────────▼──────────────┐
+│   .msg Files on Disk        │
+│  /path/to/email/folder      │
+└─────────────────────────────┘
+```
+
+---
+
+## Performance Expectations
+
+- **Setup**: ~1-2 minutes (venv creation + pip install)
+- **First indexing**: ~1 minute per 1,000 emails (depends on CPU/disk)
+- **Search**: ~50-100ms for typical queries
+- **Browsing**: Instant folder navigation
+
+---
+
+## Key Features
+
+✓ Multi-user (create unlimited users via admin panel)  
+✓ Per-user email folders  
+✓ Background indexing (doesn't block the UI)  
+✓ Full-text search (fast FTS5 implementation)  
+✓ 3-pane email interface (like traditional mail clients)  
+✓ Attachment preview/download  
+✓ Role-based access (admin vs regular users)  
+✓ Password-protected  
+✓ Local only (runs on your machine, no cloud)  
+
+---
+
+Enjoy browsing your emails! 📧
   ```
 - Click **Save Path**
 

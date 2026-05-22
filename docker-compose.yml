@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  email-viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: email-viewer
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+    volumes:
+      # Mount the data directory to persist database across runs
+      - ./data:/app/data
+      - ./settings.json:/app/settings.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
