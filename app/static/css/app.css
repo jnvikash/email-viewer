@@ -210,3 +210,14 @@ mark { background: #fff176; border-radius: 2px; padding: 0 1px; }
   #mainLayout { grid-template-columns: 1fr; }
   #listPane { display: none; }
 }
+
+/* ── Spinner Animation ──────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

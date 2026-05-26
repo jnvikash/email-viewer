@@ -43,6 +43,12 @@ Welcome! Here's where to find what you need.
    - Debugging tips
    - Security checklist
 
+5. **[INDEXING_PERFORMANCE.md](INDEXING_PERFORMANCE.md)** — Speed up email indexing
+   - Performance optimization strategies
+   - Skip attachment extraction (3-5x faster)
+   - Batch size tuning
+   - Troubleshooting slow indexing
+
 ---
 
 ## 🛠️ Make Commands

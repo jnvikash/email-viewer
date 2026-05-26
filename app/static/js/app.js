@@ -3,6 +3,7 @@ import { EmailList } from './email-list.js';
 import { ReadingPane } from './reading-pane.js';
 import { Search } from './search.js';
 import { IndexProgress } from './index-progress.js';
+import { IndexMonitor } from './index-monitor.js';
 
 // Expose globals needed by inline event handlers in HTML
 window.FolderTree = FolderTree;
@@ -15,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
     FolderTree.reload();
     EmailList.reload();
   });
+
+  // Start progressive indexing monitor (inline banner + live updates)
+  IndexMonitor.init();
 
   FolderTree.init((path, name) => {
     document.getElementById('clearSearch').style.display = 'none';

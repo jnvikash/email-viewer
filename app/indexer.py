@@ -15,15 +15,26 @@ _lock = threading.Lock()
 _threads: dict[int, threading.Thread] = {}  # user_id -> thread
 
 MAX_FTS_BODY = 1_048_576  # 1 MB
+MAX_ATTACHMENT_SIZE = 50_000_000  # 50 MB - skip extracting text from larger files
+EXTRACT_ATTACHMENTS = True  # Set to False to skip attachment text extraction (much faster)
 
 
 def _extract_attachment_text(file_path: str) -> str:
     """Best-effort text extraction from attachments for FTS indexing."""
+    if not EXTRACT_ATTACHMENTS:
+        return ""
+
     texts = []
     try:
         from .msg_parser import list_attachments, get_attachment_bytes
         for att in list_attachments(file_path):
             fname = att["filename"].lower()
+            size = att.get("size", 0)
+
+            # Skip extracting text from large attachments
+            if size > MAX_ATTACHMENT_SIZE:
+                continue
+
             try:
                 result = get_attachment_bytes(file_path, att["attach_index"])
                 if not result:
@@ -135,7 +146,7 @@ class IndexerThread(threading.Thread):
 
         done = 0
         skipped = 0
-        BATCH = 50
+        BATCH = 150  # Increased from 50 for better throughput with WAL mode
 
         for i in range(0, total, BATCH):
             batch = files[i:i + BATCH]

@@ -66,6 +66,31 @@ def list_emails():
     })
 
 
+@bp.route("/index-status", methods=["GET"])
+@login_required
+def index_status():
+    """Get indexing status with email counts."""
+    from ..indexer import get_status
+
+    db = get_db()
+    indexed_count = db.execute(
+        "SELECT COUNT(*) FROM emails WHERE user_id=?",
+        (current_user.id,)
+    ).fetchone()[0]
+
+    indexer_status = get_status(current_user.id)
+
+    return jsonify({
+        "indexed_count": indexed_count,
+        "total_files": indexer_status.get("total_files", 0),
+        "indexing": indexer_status.get("status") == "running",
+        "status": indexer_status.get("status", "idle"),
+        "percent": round(
+            indexer_status.get("done_files", 0) / indexer_status.get("total_files", 1) * 100, 1
+        ) if indexer_status.get("total_files") else 0
+    })
+
+
 @bp.route("/<int:email_id>", methods=["GET"])
 @login_required
 def get_email(email_id: int):

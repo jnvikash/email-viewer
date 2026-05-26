@@ -45,7 +45,13 @@ def get_folders():
     global _cache
     now = time.time()
     cache_key = f"user_{current_user.id}"
-    if cache_key in _cache and (now - _cache[cache_key]["ts"]) < _CACHE_TTL:
+
+    # Don't cache if indexing is in progress (refresh live)
+    from ..indexer import get_status
+    status = get_status(current_user.id)
+    is_indexing = status.get("status") == "running"
+
+    if not is_indexing and cache_key in _cache and (now - _cache[cache_key]["ts"]) < _CACHE_TTL:
         return jsonify(_cache[cache_key]["tree"])
 
     db = get_db()
@@ -55,8 +61,27 @@ def get_folders():
     ).fetchall()
 
     tree = _build_tree(rows)
-    _cache[cache_key] = {"tree": tree, "ts": now}
-    return jsonify(tree)
+
+    # Add indexing status to response
+    if is_indexing:
+        total = status.get("total_files", 0)
+        done = status.get("done_files", 0)
+        response = {
+            "folders": tree,
+            "indexing": {
+                "status": "running",
+                "done": done,
+                "total": total,
+                "percent": round(done / total * 100, 1) if total > 0 else 0
+            }
+        }
+    else:
+        response = {"folders": tree, "indexing": None}
+
+    if not is_indexing:
+        _cache[cache_key] = {"tree": response, "ts": now}
+
+    return jsonify(response)
 
 
 def invalidate_folder_cache(user_id: int = None):
