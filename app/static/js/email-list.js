@@ -7,6 +7,10 @@ export const EmailList = (() => {
     sort: '-date',
     dateFrom: '',
     dateTo: '',
+    fromEmail: '',
+    toEmail: '',
+    subjectQ: '',
+    hasAttachment: false,
     searchMode: false,
     searchQuery: '',
   };
@@ -55,19 +59,53 @@ export const EmailList = (() => {
     panel.style.display = panel.style.display === 'none' ? '' : 'none';
   }
 
+  function _hasActiveFilters() {
+    return !!(
+      _state.dateFrom || _state.dateTo ||
+      _state.fromEmail || _state.toEmail ||
+      _state.subjectQ || _state.hasAttachment
+    );
+  }
+
+  function _updateFilterBtn() {
+    const btn = document.querySelector('[onclick="EmailList.toggleFilter()"]');
+    if (!btn) return;
+    if (_hasActiveFilters()) {
+      btn.classList.add('btn-warning');
+      btn.classList.remove('btn-outline-secondary');
+    } else {
+      btn.classList.remove('btn-warning');
+      btn.classList.add('btn-outline-secondary');
+    }
+  }
+
   function applyFilter() {
-    _state.dateFrom = document.getElementById('filterDateFrom').value;
-    _state.dateTo = document.getElementById('filterDateTo').value;
+    _state.dateFrom       = document.getElementById('filterDateFrom').value;
+    _state.dateTo         = document.getElementById('filterDateTo').value;
+    _state.fromEmail      = document.getElementById('filterFromEmail').value.trim();
+    _state.toEmail        = document.getElementById('filterToEmail').value.trim();
+    _state.subjectQ       = document.getElementById('filterSubject').value.trim();
+    _state.hasAttachment  = document.getElementById('filterHasAttachment').checked;
     _state.page = 1;
+    _updateFilterBtn();
     _load();
   }
 
   function clearFilter() {
     _state.dateFrom = '';
     _state.dateTo = '';
+    _state.fromEmail = '';
+    _state.toEmail = '';
+    _state.subjectQ = '';
+    _state.hasAttachment = false;
     document.getElementById('filterDateFrom').value = '';
     document.getElementById('filterDateTo').value = '';
+    document.getElementById('filterFromEmail').value = '';
+    document.getElementById('filterToEmail').value = '';
+    document.getElementById('filterSubject').value = '';
+    document.getElementById('filterHasAttachment').checked = false;
     _state.page = 1;
+    _updateFilterBtn();
     _load();
   }
 
@@ -76,7 +114,18 @@ export const EmailList = (() => {
     rows.innerHTML = '<div class="empty-state"><div class="spinner-border spinner-border-sm" role="status"></div></div>';
 
     try {
-      let url, data;
+      let data;
+
+      // Append structured filter fields shared by both endpoints
+      const _addFilters = (p) => {
+        if (_state.dateFrom)      p.set('date_from',      _state.dateFrom);
+        if (_state.dateTo)        p.set('date_to',        _state.dateTo);
+        if (_state.fromEmail)     p.set('from_email',     _state.fromEmail);
+        if (_state.toEmail)       p.set('to_email',       _state.toEmail);
+        if (_state.subjectQ)      p.set('subject',        _state.subjectQ);
+        if (_state.hasAttachment) p.set('has_attachment', '1');
+      };
+
       if (_state.searchMode) {
         const p = new URLSearchParams({
           q: _state.searchQuery,
@@ -84,6 +133,7 @@ export const EmailList = (() => {
           page: _state.page,
           per_page: _state.perPage,
         });
+        _addFilters(p);
         const r = await fetch(`/api/search?${p}`);
         data = await r.json();
       } else {
@@ -93,8 +143,7 @@ export const EmailList = (() => {
           per_page: _state.perPage,
           sort: _state.sort,
         });
-        if (_state.dateFrom) p.set('date_from', _state.dateFrom);
-        if (_state.dateTo) p.set('date_to', _state.dateTo);
+        _addFilters(p);
         const r = await fetch(`/api/emails?${p}`);
         data = await r.json();
       }

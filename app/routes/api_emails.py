@@ -27,6 +27,10 @@ def list_emails():
     date_from = request.args.get("date_from", "").strip()
     date_to = request.args.get("date_to", "").strip()
     sender = request.args.get("sender", "").strip()
+    from_email = request.args.get("from_email", "").strip()
+    to_email = request.args.get("to_email", "").strip()
+    subject_q = request.args.get("subject", "").strip()
+    has_attachment = request.args.get("has_attachment", "").strip()
 
     order = VALID_SORTS.get(sort, "date_sent DESC")
     offset = (page - 1) * per_page
@@ -47,6 +51,18 @@ def list_emails():
     if sender:
         conditions.append("(sender_name LIKE ? OR sender_email LIKE ?)")
         params += [f"%{sender}%", f"%{sender}%"]
+    if from_email:
+        conditions.append("sender_email LIKE ?")
+        params.append(f"%{from_email}%")
+    if to_email:
+        # recipients stored as JSON array; LIKE covers substring within the JSON text
+        conditions.append("recipients LIKE ?")
+        params.append(f"%{to_email}%")
+    if subject_q:
+        conditions.append("subject LIKE ?")
+        params.append(f"%{subject_q}%")
+    if has_attachment == "1":
+        conditions.append("attachment_count > 0")
 
     where = "WHERE " + " AND ".join(conditions)
 

@@ -330,7 +330,7 @@ function escHtml(str) {
 function openCreateUserModal() {
   document.getElementById('createUserForm').reset();
   document.getElementById('createError').style.display = 'none';
-  createModal.show();
+  if (createModal) createModal.show();
 }
 
 function submitCreateUser() {
@@ -353,7 +353,7 @@ function submitCreateUser() {
   .then(r => r.json().then(d => [r.ok, d]))
   .then(([ok, d]) => {
     if (ok) {
-      createModal.hide();
+      if (createModal) createModal.hide();
       loadUsers();
       showGlobal(`User "${data.username}" created successfully.`, 'success');
     } else {
@@ -379,7 +379,7 @@ function openEditModal(userId) {
   document.getElementById('editUserTitle').innerHTML =
     `<i class="bi bi-pencil me-2"></i>Edit User: <strong>${escHtml(user.username)}</strong>`;
   document.getElementById('editError').style.display = 'none';
-  editModal.show();
+  if (editModal) editModal.show();
 }
 
 function submitEditUser() {
@@ -406,7 +406,7 @@ function submitEditUser() {
     }
     const password = document.getElementById('editPassword').value;
     if (!password) {
-      editModal.hide();
+      if (editModal) editModal.hide();
       loadUsers();
       showGlobal('User updated.', 'success');
       return;
@@ -423,7 +423,7 @@ function submitEditUser() {
         errEl.style.display = '';
         return;
       }
-      editModal.hide();
+      if (editModal) editModal.hide();
       loadUsers();
       showGlobal('User updated (password changed).', 'success');
     });
@@ -500,7 +500,7 @@ function openFolderBrowser(targetFieldId) {
 
   document.getElementById('fbSelectedPath').textContent = fbSelectedPath || '—';
   document.getElementById('fbAlert').style.display = 'none';
-  fbModal.show();
+  if (fbModal) fbModal.show();
 }
 
 function fbNavigate(path) {
@@ -603,7 +603,7 @@ function fbConfirmSelection() {
   if (fbTargetField) {
     document.getElementById(fbTargetField).value = fbSelectedPath;
   }
-  fbModal.hide();
+  if (fbModal) fbModal.hide();
 }
 
 function escJs(str) {
@@ -613,9 +613,15 @@ function escJs(str) {
 // ─── Init ──────────────────────────────────────────────────────────────────
 // DOMContentLoaded fires after Bootstrap JS (loaded at end of <body>) has executed.
 document.addEventListener('DOMContentLoaded', () => {
-  createModal = new bootstrap.Modal(document.getElementById('createUserModal'));
-  editModal   = new bootstrap.Modal(document.getElementById('editUserModal'));
-  fbModal     = new bootstrap.Modal(document.getElementById('folderBrowserModal'));
+  try {
+    if (typeof bootstrap !== 'undefined') {
+      createModal = new bootstrap.Modal(document.getElementById('createUserModal'));
+      editModal   = new bootstrap.Modal(document.getElementById('editUserModal'));
+      fbModal     = new bootstrap.Modal(document.getElementById('folderBrowserModal'));
+    }
+  } catch (e) {
+    console.error('Modal initialization failed:', e);
+  }
   loadUsers();
 });
 </script>

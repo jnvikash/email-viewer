@@ -241,8 +241,8 @@ def init_db() -> None:
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
-    # Migrate first so ALTER TABLE adds columns before CREATE INDEX runs
-    _migrate(conn)
+    # Create schema first (with CREATE TABLE IF NOT EXISTS), then migrate
     conn.executescript(SCHEMA)
+    _migrate(conn)
     conn.commit()
     conn.close()

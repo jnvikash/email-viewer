@@ -12,8 +12,10 @@ export const FolderTree = (() => {
     try {
       const r = await fetch('/api/folders');
       if (!r.ok) throw new Error('Failed to load folders');
-      const tree = await r.json();
+      const data = await r.json();
       container.innerHTML = '';
+      // Handle both old array format and new {folders, indexing} format
+      const tree = data.folders || data;
       const ul = _renderList(tree, 0);
       container.appendChild(ul);
       _setActive(_activePath, false);
